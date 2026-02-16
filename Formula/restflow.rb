@@ -1,26 +1,26 @@
 class Restflow < Formula
   desc "AI assistant that can execute workflows"
   homepage "https://github.com/lhwzds/restflow"
-  version "0.2.9"
+  version "0.3.2"
   license "Apache-2.0"
 
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/lhwzds/restflow/releases/download/cli-v#{version}/restflow-aarch64-apple-darwin.tar.gz"
-      sha256 "7fdd419ff0aab977dd07f0f37cedffd1dc228d01c9cea0194039297c34430c1a"
+      sha256 "e9aa6f733f13e9ceea06e22f878da0b47db6ea620add5e465fe98cbf1c39b469"
     else
       url "https://github.com/lhwzds/restflow/releases/download/cli-v#{version}/restflow-x86_64-apple-darwin.tar.gz"
-      sha256 "1097178b4836909faca265f2776f0bc15b7b739eb9f9130d41b9b4acce20c1ae"
+      sha256 "3d724c9d1de913a75526dd88f01cf3bbf4ef972c3a4824188588118516ccac63"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
       url "https://github.com/lhwzds/restflow/releases/download/cli-v#{version}/restflow-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "0140d18a8a251f1f5ec8a89ca7ec81a8b9ceb5861b0562963d22bed0c5c572c9"
+      sha256 "dd6b9727d07e73a85fe059df0056f7bea078ff1af3907afcdde51ae6634046f9"
     else
       url "https://github.com/lhwzds/restflow/releases/download/cli-v#{version}/restflow-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "6bb8feeede866d3b6e9db3cf1336e12563933e1e197839422147a399ae99b9e4"
+      sha256 "57bf816271d4a3ceb9784d0f84d3e2866d1c89388f6978996f71ce01b97963f3"
     end
   end
 
