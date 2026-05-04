@@ -2,13 +2,14 @@ name: Update Formula
 
 on:
   repository_dispatch:
-    types: [update-formula]
+    types: [update-formula, update-codocia-formula]
 
 permissions:
   contents: write
 
 jobs:
   update:
+    if: github.event.action == 'update-formula'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -87,4 +88,86 @@ jobs:
             exit 0
           fi
           git commit -m "Update restflow to ${{ steps.version.outputs.VERSION }}"
+          git push
+
+  update-codocia:
+    if: github.event.action == 'update-codocia-formula'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+
+      - name: Download checksums
+        run: |
+          curl -sL "https://github.com/lhwzds/codocia/releases/download/v${{ steps.version.outputs.VERSION }}/checksums.txt" -o checksums.txt
+          cat checksums.txt
+
+      - name: Extract SHA256 hashes
+        id: sha
+        run: |
+          echo "ARM_MAC=$(grep aarch64-apple-darwin checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "X86_MAC=$(grep x86_64-apple-darwin checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "ARM_LINUX=$(grep aarch64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "X86_LINUX=$(grep x86_64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Update formula
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          ARM_MAC="${{ steps.sha.outputs.ARM_MAC }}"
+          X86_MAC="${{ steps.sha.outputs.X86_MAC }}"
+          ARM_LINUX="${{ steps.sha.outputs.ARM_LINUX }}"
+          X86_LINUX="${{ steps.sha.outputs.X86_LINUX }}"
+
+          cat > Formula/codocia.rb << EOF
+          class Codocia < Formula
+            desc "Documentation drift checker for AI coding agents"
+            homepage "https://github.com/lhwzds/codocia"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-aarch64-apple-darwin.tar.gz"
+                sha256 "${ARM_MAC}"
+              else
+                url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-x86_64-apple-darwin.tar.gz"
+                sha256 "${X86_MAC}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-aarch64-unknown-linux-gnu.tar.gz"
+                sha256 "${ARM_LINUX}"
+              else
+                url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-x86_64-unknown-linux-gnu.tar.gz"
+                sha256 "${X86_LINUX}"
+              end
+            end
+
+            def install
+              bin.install "codocia"
+            end
+
+            test do
+              assert_match "Codocia Docs Skill", shell_output("#{bin}/codocia skill")
+            end
+          end
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/codocia.rb
+          if git diff --cached --quiet; then
+            echo "No formula changes detected."
+            exit 0
+          fi
+          git commit -m "Update codocia to ${{ steps.version.outputs.VERSION }}"
           git push
