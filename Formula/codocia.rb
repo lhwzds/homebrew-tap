@@ -1,26 +1,26 @@
 class Codocia < Formula
   desc "Documentation drift checker for AI coding agents"
   homepage "https://github.com/lhwzds/codocia"
-  version "0.1.1"
+  version "0.1.2"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-aarch64-apple-darwin.tar.gz"
-      sha256 "a9f3468cf51567058f09475c845b3e52fa7bca5a792d1879f9aeb51cbb7eae79"
+      sha256 "589b04f5bbb7e62bccb2dc7472c8122a8e0ed04a2ce559dc67ccbcf79db98799"
     else
       url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-x86_64-apple-darwin.tar.gz"
-      sha256 "31ba025ca5be34c7105fe9f3de8227a116752ec5d420cf36cb41fa04b7bcea4b"
+      sha256 "1691e19398b07e706d3dafd54f1a650f06a4d27826a8cee07d6a1e1daf6a5ee1"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
       url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "33e313e274b51f7fc57b99e5c36df4c6188ce8f5fa19f0e2b934802c86ecb0fd"
+      sha256 "a9ee6fb2898dfdea90598bcf0ca92bc459d467ab2ddd128e475df592cf632d6b"
     else
       url "https://github.com/lhwzds/codocia/releases/download/v#{version}/codocia-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "7929ada1565b4f28a2463f8c1dc89e4dae02a121640c1c2febc5943ac58f0ce8"
+      sha256 "fe937a0977f2753ffbac642718cd2a3f10a721e2531401b7859aaa519cd3d51a"
     end
   end
 
