@@ -1,21 +1,12 @@
-# Homebrew Tap for RestFlow
+# Homebrew Tap
 
 ## Installation
 
 ```bash
 brew tap lhwzds/tap
-brew install restflow
+brew install codocia
 ```
 
-## Usage
+## Formulae
 
-```bash
-restflow --help
-restflow daemon start
-restflow claude -p "Hello, world!"
-```
-
-## Links
-
-- [RestFlow GitHub](https://github.com/lhwzds/restflow)
-- [Documentation](https://docs.restflow.ai)
+- [codocia](https://github.com/lhwzds/codocia): documentation drift checker for AI coding agents
