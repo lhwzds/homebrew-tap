@@ -5,21 +5,23 @@ class Restloop < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/lhwzds/restloop/releases/download/v0.1.0/restloop-aarch64-apple-darwin"
-      sha256 "c02d35077979e9cbef281929939fde3c921bc1b2b9e7b551e423fbf2f593544d"
+      url "https://github.com/lhwzds/restloop/releases/download/v0.2.0/restloop-aarch64-apple-darwin"
+      sha256 "d04c576806df6eaf9c2867a5cfd4d923746767e7d2dfb5cfa92699e57f134838"
     end
     on_intel do
-      url "https://github.com/lhwzds/restloop/releases/download/v0.1.0/restloop-x86_64-apple-darwin"
-      sha256 "d096b991173eb97b76cb5e4586c18103f279e4f4fd2a899a457573c312bef763"
+      url "https://github.com/lhwzds/restloop/releases/download/v0.2.0/restloop-x86_64-apple-darwin"
+      sha256 "a8cc4353c2c57ca003bb45b250a7578154be02f9c9dbc6320ef4f42a578cac12"
     end
   end
 
   on_linux do
-    depends_on arch: :x86_64
-
+    on_arm do
+      url "https://github.com/lhwzds/restloop/releases/download/v0.2.0/restloop-aarch64-unknown-linux-musl"
+      sha256 "6257113337219bb721b84c76fe2848134eb9ace77ab0bbac206de5eb54720e1b"
+    end
     on_intel do
-      url "https://github.com/lhwzds/restloop/releases/download/v0.1.0/restloop-x86_64-unknown-linux-musl"
-      sha256 "a987f3507c8a8e4b7a6e0faaacdbc81cd8f457ac77d484934548d3fd1b389d17"
+      url "https://github.com/lhwzds/restloop/releases/download/v0.2.0/restloop-x86_64-unknown-linux-musl"
+      sha256 "58db49336270c07ec4f741efb2df501fed45224a2a39faabc03821a5ea8c8d17"
     end
   end
 
