@@ -43,7 +43,7 @@ jobs:
 
           cat > Formula/codocia.rb << EOF
           class Codocia < Formula
-            desc "Documentation drift checker for AI coding agents"
+            desc "Notebook for AI coding agents that compiles source-grounded docs"
             homepage "https://github.com/lhwzds/codocia"
             version "${VERSION}"
             license "MIT"
@@ -73,7 +73,7 @@ jobs:
             end
 
             test do
-              assert_match "Codocia Docs Skill", shell_output("#{bin}/codocia skill")
+              assert_match "Codocia Skill", shell_output("#{bin}/codocia skill")
             end
           end
           EOF

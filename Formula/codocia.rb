@@ -1,5 +1,5 @@
 class Codocia < Formula
-  desc "Documentation drift checker for AI coding agents"
+  desc "Notebook for AI coding agents that compiles source-grounded docs"
   homepage "https://github.com/lhwzds/codocia"
   version "0.1.3"
   license "MIT"
@@ -29,6 +29,6 @@ class Codocia < Formula
   end
 
   test do
-    assert_match "Codocia Docs Skill", shell_output("#{bin}/codocia skill")
+    assert_match "Codocia Skill", shell_output("#{bin}/codocia skill")
   end
 end
