@@ -35,12 +35,14 @@ jobs:
           # strip a leading "v" (e.g. v0.2.1 -> 0.2.1)
           VERSION="${VERSION#v}"
 
-          CURRENT=$(grep -E '^[[:space:]]*version[[:space:]]+"' Formula/codocia.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-
-          if [ -z "$VERSION" ]; then
-            echo "::error::Could not determine the version to update to"
+          # only plain versions are accepted (the whole string, newlines included),
+          # so the value can never inject shell commands, step outputs or URL parts
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Invalid version: '$VERSION'"
             exit 1
           fi
+
+          CURRENT=$(grep -E '^[[:space:]]*version[[:space:]]+"' Formula/codocia.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
 
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "CURRENT=$CURRENT" >> $GITHUB_OUTPUT
@@ -55,8 +57,12 @@ jobs:
 
       - name: Download checksums
         if: steps.version.outputs.UPDATED == 'true'
+        # the version is handed over through the environment, so that it is
+        # never interpolated into the shell script itself
+        env:
+          VERSION: ${{steps.version.outputs.VERSION}}
         run: |
-          curl -sL "https://github.com/lhwzds/codocia/releases/download/v${{ steps.version.outputs.VERSION }}/checksums.txt" -o checksums.txt
+          curl -sL "https://github.com/lhwzds/codocia/releases/download/v${VERSION}/checksums.txt" -o checksums.txt
           cat checksums.txt
 
       - name: Extract SHA256 hashes
@@ -86,13 +92,13 @@ jobs:
 
       - name: Update formula
         if: steps.version.outputs.UPDATED == 'true'
+        env:
+          VERSION: ${{steps.version.outputs.VERSION}}
+          ARM_MAC: ${{steps.sha.outputs.ARM_MAC}}
+          X86_MAC: ${{steps.sha.outputs.X86_MAC}}
+          ARM_LINUX: ${{steps.sha.outputs.ARM_LINUX}}
+          X86_LINUX: ${{steps.sha.outputs.X86_LINUX}}
         run: |
-          VERSION="${{ steps.version.outputs.VERSION }}"
-          ARM_MAC="${{ steps.sha.outputs.ARM_MAC }}"
-          X86_MAC="${{ steps.sha.outputs.X86_MAC }}"
-          ARM_LINUX="${{ steps.sha.outputs.ARM_LINUX }}"
-          X86_LINUX="${{ steps.sha.outputs.X86_LINUX }}"
-
           require_hash() {
             if [ -z "$1" ]; then
               echo "::error::Refusing to write the formula with an empty SHA256 hash ($2)"
@@ -143,6 +149,8 @@ jobs:
 
       - name: Commit and push
         if: steps.version.outputs.UPDATED == 'true'
+        env:
+          VERSION: ${{steps.version.outputs.VERSION}}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -151,5 +159,5 @@ jobs:
             echo "No formula changes detected."
             exit 0
           fi
-          git commit -m "Update codocia to ${{ steps.version.outputs.VERSION }}"
+          git commit -m "Update codocia to $VERSION"
           git push
