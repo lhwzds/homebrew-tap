@@ -30,6 +30,11 @@ jobs:
             VERSION="$REQUESTED_VERSION"
           else
             TAG=$(gh release view --repo lhwzds/codocia --json tagName --jq .tagName)
+            # Codocia's release workflow only runs for v* tags
+            if [[ "$TAG" != v* ]]; then
+              echo "::error::Latest release tag '$TAG' does not start with v"
+              exit 1
+            fi
             VERSION="$TAG"
           fi
           # strip a leading "v" (e.g. v0.2.1 -> 0.2.1)
@@ -62,33 +67,34 @@ jobs:
         env:
           VERSION: ${{steps.version.outputs.VERSION}}
         run: |
-          curl -sL "https://github.com/lhwzds/codocia/releases/download/v${VERSION}/checksums.txt" -o checksums.txt
-          cat checksums.txt
+          # outside the checkout, so the commit can only contain the formula
+          curl -fsSL "https://github.com/lhwzds/codocia/releases/download/v${VERSION}/checksums.txt" -o "$RUNNER_TEMP/checksums.txt"
+          cat "$RUNNER_TEMP/checksums.txt"
 
       - name: Extract SHA256 hashes
         id: sha
         if: steps.version.outputs.UPDATED == 'true'
         run: |
-          ARM_MAC=$(grep aarch64-apple-darwin checksums.txt | cut -d' ' -f1)
-          X86_MAC=$(grep x86_64-apple-darwin checksums.txt | cut -d' ' -f1)
-          ARM_LINUX=$(grep aarch64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)
-          X86_LINUX=$(grep x86_64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)
-
-          echo "ARM_MAC=$ARM_MAC" >> $GITHUB_OUTPUT
-          echo "X86_MAC=$X86_MAC" >> $GITHUB_OUTPUT
-          echo "ARM_LINUX=$ARM_LINUX" >> $GITHUB_OUTPUT
-          echo "X86_LINUX=$X86_LINUX" >> $GITHUB_OUTPUT
-
-          require_hash() {
-            if [ -z "$1" ]; then
-              echo "::error::Missing SHA256 hash for $2 in checksums.txt"
+          # exactly one line per archive, and a 64-character hex hash, before any
+          # value is written to the step outputs or into the Ruby formula
+          hash_for() {
+            local lines
+            lines=$(awk -v f="codocia-$1.tar.gz" '$2 == f || $2 == "*" f {print $1}' "$RUNNER_TEMP/checksums.txt")
+            if [[ $(printf '%s\n' "$lines" | grep -c .) -ne 1 || ! "$lines" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::Expected one SHA256 for codocia-$1.tar.gz in checksums.txt" >&2
               exit 1
             fi
+            printf '%s' "$lines"
           }
-          require_hash "$ARM_MAC" ARM_MAC
-          require_hash "$X86_MAC" X86_MAC
-          require_hash "$ARM_LINUX" ARM_LINUX
-          require_hash "$X86_LINUX" X86_LINUX
+          ARM_MAC=$(hash_for aarch64-apple-darwin)
+          X86_MAC=$(hash_for x86_64-apple-darwin)
+          ARM_LINUX=$(hash_for aarch64-unknown-linux-gnu)
+          X86_LINUX=$(hash_for x86_64-unknown-linux-gnu)
+
+          echo "ARM_MAC=$ARM_MAC" >> "$GITHUB_OUTPUT"
+          echo "X86_MAC=$X86_MAC" >> "$GITHUB_OUTPUT"
+          echo "ARM_LINUX=$ARM_LINUX" >> "$GITHUB_OUTPUT"
+          echo "X86_LINUX=$X86_LINUX" >> "$GITHUB_OUTPUT"
 
       - name: Update formula
         if: steps.version.outputs.UPDATED == 'true'
