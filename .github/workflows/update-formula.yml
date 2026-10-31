@@ -1,45 +1,108 @@
 name: Update Formula
 
 on:
-  repository_dispatch:
-    types: [update-codocia-formula]
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update the formula to (e.g. 0.2.1). Leave empty to use the latest release.'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
   update-codocia:
-    if: github.event.action == 'update-codocia-formula'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Get version
         id: version
-        run: echo "VERSION=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$REQUESTED_VERSION" ]; then
+            VERSION="$REQUESTED_VERSION"
+          else
+            TAG=$(gh release view --repo lhwzds/codocia --json tagName --jq .tagName)
+            VERSION="$TAG"
+          fi
+          # strip a leading "v" (e.g. v0.2.1 -> 0.2.1)
+          VERSION="${VERSION#v}"
+
+          CURRENT=$(grep -E '^[[:space:]]*version[[:space:]]+"' Formula/codocia.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not determine the version to update to"
+            exit 1
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "CURRENT=$CURRENT" >> $GITHUB_OUTPUT
+
+          if [ "$VERSION" = "$CURRENT" ]; then
+            echo "codocia formula already at $VERSION"
+            echo "UPDATED=false" >> $GITHUB_OUTPUT
+          else
+            echo "Updating codocia formula: ${CURRENT:-unknown} -> $VERSION"
+            echo "UPDATED=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Download checksums
+        if: steps.version.outputs.UPDATED == 'true'
         run: |
           curl -sL "https://github.com/lhwzds/codocia/releases/download/v${{ steps.version.outputs.VERSION }}/checksums.txt" -o checksums.txt
           cat checksums.txt
 
       - name: Extract SHA256 hashes
         id: sha
+        if: steps.version.outputs.UPDATED == 'true'
         run: |
-          echo "ARM_MAC=$(grep aarch64-apple-darwin checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "X86_MAC=$(grep x86_64-apple-darwin checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "ARM_LINUX=$(grep aarch64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "X86_LINUX=$(grep x86_64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          ARM_MAC=$(grep aarch64-apple-darwin checksums.txt | cut -d' ' -f1)
+          X86_MAC=$(grep x86_64-apple-darwin checksums.txt | cut -d' ' -f1)
+          ARM_LINUX=$(grep aarch64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)
+          X86_LINUX=$(grep x86_64-unknown-linux-gnu checksums.txt | cut -d' ' -f1)
+
+          echo "ARM_MAC=$ARM_MAC" >> $GITHUB_OUTPUT
+          echo "X86_MAC=$X86_MAC" >> $GITHUB_OUTPUT
+          echo "ARM_LINUX=$ARM_LINUX" >> $GITHUB_OUTPUT
+          echo "X86_LINUX=$X86_LINUX" >> $GITHUB_OUTPUT
+
+          require_hash() {
+            if [ -z "$1" ]; then
+              echo "::error::Missing SHA256 hash for $2 in checksums.txt"
+              exit 1
+            fi
+          }
+          require_hash "$ARM_MAC" ARM_MAC
+          require_hash "$X86_MAC" X86_MAC
+          require_hash "$ARM_LINUX" ARM_LINUX
+          require_hash "$X86_LINUX" X86_LINUX
 
       - name: Update formula
+        if: steps.version.outputs.UPDATED == 'true'
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
           ARM_MAC="${{ steps.sha.outputs.ARM_MAC }}"
           X86_MAC="${{ steps.sha.outputs.X86_MAC }}"
           ARM_LINUX="${{ steps.sha.outputs.ARM_LINUX }}"
           X86_LINUX="${{ steps.sha.outputs.X86_LINUX }}"
+
+          require_hash() {
+            if [ -z "$1" ]; then
+              echo "::error::Refusing to write the formula with an empty SHA256 hash ($2)"
+              exit 1
+            fi
+          }
+          require_hash "$ARM_MAC" ARM_MAC
+          require_hash "$X86_MAC" X86_MAC
+          require_hash "$ARM_LINUX" ARM_LINUX
+          require_hash "$X86_LINUX" X86_LINUX
 
           cat > Formula/codocia.rb << EOF
           class Codocia < Formula
@@ -79,6 +142,7 @@ jobs:
           EOF
 
       - name: Commit and push
+        if: steps.version.outputs.UPDATED == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
